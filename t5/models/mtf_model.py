@@ -228,8 +228,12 @@ class MtfModel(T5Model):
         variables that appear both in the current graph and the checkpoint.
       split: str, the mixture/task split to train on.
     """
-    vocabulary = t5.data.get_mixture_or_task(
-        mixture_or_task_name).get_vocabulary()
+    provider = t5.data.get_mixture_or_task(mixture_or_task_name)
+    features = provider.output_features
+    if "inputs" in features and "targets" in features:
+      vocabulary = (features["inputs"], features["targets"])
+    else:
+      vocabulary = provider.get_vocabulary()
     dataset_fn = functools.partial(
         mesh_train_dataset_fn, mixture_or_task_name=mixture_or_task_name)
     utils.train_model(self.estimator(vocabulary, init_checkpoint), vocabulary,
@@ -255,8 +259,12 @@ class MtfModel(T5Model):
     """
     if checkpoint_steps == -1:
       checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
-    vocabulary = t5.data.get_mixture_or_task(
-        mixture_or_task_name).get_vocabulary()
+    provider = t5.data.get_mixture_or_task(mixture_or_task_name)
+    features = provider.output_features
+    if "inputs" in features and "targets" in features:
+      vocabulary = (features["inputs"], features["targets"])
+    else:
+      vocabulary = provider.get_vocabulary()
     dataset_fn = functools.partial(
         mesh_eval_dataset_fn, mixture_or_task_name=mixture_or_task_name)
     with gin.unlock_config():
@@ -295,7 +303,8 @@ class MtfModel(T5Model):
 
   def predict(self, input_file, output_file, checkpoint_steps=-1,
               beam_size=1, temperature=1.0,
-              sentencepiece_model_path=t5.data.DEFAULT_SPM_PATH):
+              sentencepiece_model_path=t5.data.DEFAULT_SPM_PATH,
+              vocabulary=None):
     """Predicts targets from the given inputs.
 
     Args:
@@ -314,6 +323,9 @@ class MtfModel(T5Model):
         0.0 means argmax, 1.0 means sample according to predicted distribution.
       sentencepiece_model_path: str, path to the SentencePiece model file to use
         for decoding. Must match the one used during training.
+      vocabulary: vocabularies.Vocabulary object to use for tokenization, or
+        None to use a SentencePieceVocabulary with the provided
+        sentencepiece_model_path.
     """
     # TODO(sharannarang) : It would be nice to have a function like
     # load_checkpoint that loads the model once and then call decode_from_file
@@ -328,7 +340,8 @@ class MtfModel(T5Model):
       gin.bind_parameter("Bitransformer.decode.beam_size", beam_size)
       gin.bind_parameter("Bitransformer.decode.temperature", temperature)
 
-    vocabulary = t5.data.SentencePieceVocabulary(sentencepiece_model_path)
+    if vocabulary is None:
+      vocabulary = t5.data.SentencePieceVocabulary(sentencepiece_model_path)
     utils.infer_model(
         self.estimator(vocabulary), vocabulary, self._sequence_length,
         self.batch_size, self._model_type, self._model_dir, checkpoint_steps,
@@ -336,7 +349,8 @@ class MtfModel(T5Model):
 
   def export(self, export_dir=None, checkpoint_step=-1, beam_size=1,
              temperature=1.0,
-             sentencepiece_model_path=t5.data.DEFAULT_SPM_PATH):
+             sentencepiece_model_path=t5.data.DEFAULT_SPM_PATH,
+             vocabulary=None):
     """Exports a TensorFlow SavedModel.
 
     Args:
@@ -350,6 +364,9 @@ class MtfModel(T5Model):
         0.0 means argmax, 1.0 means sample according to predicted distribution.
       sentencepiece_model_path: str, path to the SentencePiece model file to use
         for decoding. Must match the one used during training.
+      vocabulary: vocabularies.Vocabulary object to use for tokenization, or
+        None to use a SentencePieceVocabulary with the provided
+        sentencepiece_model_path.
 
     Returns:
       The string path to the exported directory.
@@ -361,7 +378,8 @@ class MtfModel(T5Model):
       gin.bind_parameter("Bitransformer.decode.beam_size", beam_size)
       gin.bind_parameter("Bitransformer.decode.temperature", temperature)
 
-    vocabulary = t5.data.SentencePieceVocabulary(sentencepiece_model_path)
+    if vocabulary is None:
+      vocabulary = t5.data.SentencePieceVocabulary(sentencepiece_model_path)
     model_ckpt = "model.ckpt-" + str(checkpoint_step)
     export_dir = export_dir or self._model_dir
     return utils.export_model(

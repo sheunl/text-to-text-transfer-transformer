@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for t5.data.sentencepiece_vocabulary."""
+"""Tests for t5.data.vocabularies."""
 
 from absl.testing import absltest
 from t5.data import test_utils

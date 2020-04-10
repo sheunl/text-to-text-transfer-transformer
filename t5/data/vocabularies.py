@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python3
 """Sentencepiece vocabulary."""
+
+import abc
 
 import gin
 import tensorflow.compat.v1 as tf
@@ -22,7 +25,31 @@ import sentencepiece as sentencepiece_processor
 
 
 @gin.configurable
-class SentencePieceVocabulary(object):
+class Vocabulary(object):
+  """Base class for all vocabularies."""
+
+  def __init__(self, extra_ids=0):
+    self._extra_ids = extra_ids
+
+  @abc.abstractmethod
+  def encode(self, s):
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def decode(self, ids):
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def encode_tf(self, s):
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def decode_tf(self, ids):
+    raise NotImplementedError
+
+
+@gin.configurable
+class SentencePieceVocabulary(Vocabulary):
   """Wrapper for nlp/sentencepiece encoder.
 
   Interface matches mesh_tensorflow.transformer Vocabulary object.
@@ -46,7 +73,7 @@ class SentencePieceVocabulary(object):
     # Handle cases where SP can't load the file, but gfile can.
     self._sp_model = tf.gfile.GFile(sentencepiece_model_file, "rb").read()
     self._tokenizer.LoadFromSerializedProto(self._sp_model)
-    self._extra_ids = extra_ids
+    super().__init__(extra_ids=extra_ids)
 
   @property
   def _tf_tokenizer(self):

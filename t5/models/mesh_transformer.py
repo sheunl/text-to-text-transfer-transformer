@@ -27,12 +27,6 @@ import tensorflow_datasets as tfds
 
 
 @gin.configurable()
-def get_sentencepiece_model_path(mixture_or_task_name):
-  return t5.data.get_mixture_or_task(
-      mixture_or_task_name).sentencepiece_model_path
-
-
-@gin.configurable()
 def mesh_train_dataset_fn(
     mixture_or_task_name,
     sequence_length,
@@ -49,7 +43,7 @@ def mesh_train_dataset_fn(
       appropriate registry. Must be specified via gin.
     sequence_length: dict mapping feature key to the int length for that feature
       the max sequence length.
-    vocabulary: a SentencePieceVocabulary.
+    vocabulary: a t5.data.vocabularies.Vocabulary.
     dataset_split: string, which split of the dataset to load. In most cases
       this should be "train".
     use_cached: bool, whether to load the cached version of this dataset.
@@ -57,8 +51,8 @@ def mesh_train_dataset_fn(
   Returns:
     A tf.data.Dataset of preprocessed, tokenized, and batched examples.
   """
-  if not isinstance(vocabulary, t5.data.SentencePieceVocabulary):
-    raise ValueError("vocabulary must be a SentencePieceVocabulary")
+  if not isinstance(vocabulary, t5.data.vocabularies.Vocabulary):
+    raise ValueError("vocabulary must be a t5.data.vocabularies.Vocabulary")
 
   mixture_or_task = t5.data.get_mixture_or_task(mixture_or_task_name)
 
@@ -93,7 +87,7 @@ def mesh_eval_dataset_fn(
       appropriate registry. Must be specified via gin.
     sequence_length: dict mapping feature key to the int length for that feature
       the max sequence length.
-    vocabulary: a SentencePieceVocabulary.
+    vocabulary: a t5.data.vocabularies.Vocabulary.
     dataset_split: string, which split of the dataset to load.
     num_eval_examples: maximum number of examples per task to use for continuous
       eval. If None, use all examples.
@@ -102,8 +96,8 @@ def mesh_eval_dataset_fn(
   Returns:
     A list of mesh_tensorflow.transformer.dataset.EvalDataset tuples.
   """
-  if not isinstance(vocabulary, t5.data.SentencePieceVocabulary):
-    raise ValueError("vocabulary must be a SentencePieceVocabulary")
+  if not isinstance(vocabulary, t5.data.vocabularies.Vocabulary):
+    raise ValueError("vocabulary must be a t5.data.vocabularies.Vocabulary")
 
   mixture_or_task = t5.data.get_mixture_or_task(mixture_or_task_name)
 
